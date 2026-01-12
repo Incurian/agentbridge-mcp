@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentbridge-mcp"
+version = "0.2.0"
+description = "MCP server for AI agent integration with Unreal Engine via AgentBridge"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Incurian"}
+]
+keywords = ["mcp", "unreal", "grpc", "ai", "agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "grpcio>=1.50.0",
+    "protobuf>=4.21.0",
+    "requests>=2.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Incurian/agentbridge-mcp"
+Repository = "https://github.com/Incurian/agentbridge-mcp"
+
+[project.scripts]
+agentbridge-mcp = "mcp.server:main"
+
+[tool.setuptools]
+packages = ["mcp", "mcp.services", "agentbridge"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]
