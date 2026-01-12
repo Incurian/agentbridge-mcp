@@ -9,5 +9,5 @@ protobuf>=4.21.0
 
 # Note: The generated protobuf stubs (AgentBridgeServer, TempoScripting)
 # are installed by Tempo's build process into the TempoEnv virtual environment.
-# To use outside of TempoEnv, add to PYTHONPATH:
-#   D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo
+# The MCP server auto-detects the Tempo API path, or you can set TEMPO_API_PATH:
+#   export TEMPO_API_PATH=/path/to/YourProject/Plugins/Tempo/TempoCore/Content/Python/API/tempo

@@ -3,12 +3,13 @@
 Integration tests for AgentBridge Wishlist features.
 
 Tests the new Asset, Component, and File operations.
-Requires Unreal Editor running with TempoSample project.
+Requires Unreal Editor running with your project.
 
-Usage:
-    cd D:/tempo/TempoSample/Plugins/AgentBridge/Python
-    PYTHONPATH="D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo" \
-        D:/tempo/TempoSample/TempoEnv/Scripts/python.exe test_wishlist.py
+Usage (from AgentBridge directory):
+    python -m mcp.tests.test_wishlist
+
+Or with explicit TEMPO_API_PATH:
+    TEMPO_API_PATH=/path/to/Tempo/TempoCore/Content/Python/API/tempo python -m mcp.tests.test_wishlist
 """
 
 import sys
@@ -16,9 +17,13 @@ import os
 import json
 import time
 import traceback
+from pathlib import Path
 
-# Add the Python directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Set up path to find mcp package
+_this_dir = Path(__file__).parent
+_mcp_dir = _this_dir.parent
+if str(_mcp_dir.parent) not in sys.path:
+    sys.path.insert(0, str(_mcp_dir.parent))  # AgentBridge dir
 
 from mcp.services.agentbridge import connect, execute
 

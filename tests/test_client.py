@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
-Test script for the AgentBridge Python client.
+Test script for the AgentBridge HTTP client.
 
-Run with: python test_client.py
+Run from AgentBridge directory:
+    python -m mcp.tests.test_client
 
 Requires the Unreal Editor to be running with the AgentBridge plugin loaded.
+Uses HTTP fallback (port 8080) instead of gRPC.
 """
 
 import sys
-sys.path.insert(0, ".")
+from pathlib import Path
+
+# Set up path to find agentbridge package
+_this_dir = Path(__file__).parent
+_mcp_dir = _this_dir.parent
+if str(_mcp_dir) not in sys.path:
+    sys.path.insert(0, str(_mcp_dir))
 
 from agentbridge import AgentBridgeClient, AgentBridgeError
 

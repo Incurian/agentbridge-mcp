@@ -4,21 +4,31 @@ gRPC Test Script for AgentBridge Service
 
 Tests the AgentBridge gRPC service via Tempo's scripting infrastructure.
 Requires:
-1. Unreal Editor running with TempoSample project
+1. Unreal Editor running with your project
 2. gRPC server active (default port 50051)
 
-Run with: python test_grpc.py [--host HOST] [--port PORT]
+Run from AgentBridge directory:
+    python -m mcp.tests.test_grpc [--host HOST] [--port PORT]
+
+Or with TEMPO_API_PATH set:
+    TEMPO_API_PATH=/path/to/Tempo/TempoCore/Content/Python/API/tempo python test_grpc.py
 """
 
 import sys
 import os
 import argparse
 import time
+from pathlib import Path
 
-# Add Tempo API path for generated stubs
-_tempo_api_path = "D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo"
-if _tempo_api_path not in sys.path:
-    sys.path.insert(0, _tempo_api_path)
+# Set up path to find mcp package
+_this_dir = Path(__file__).parent
+_mcp_dir = _this_dir.parent
+if str(_mcp_dir) not in sys.path:
+    sys.path.insert(0, str(_mcp_dir.parent))  # AgentBridge dir
+
+# Use base.py's path detection
+from mcp.services.base import _find_tempo_api_path, _setup_tempo_path
+_setup_tempo_path()
 
 import grpc
 
@@ -28,9 +38,11 @@ try:
     from AgentBridgeServer import AgentBridge_pb2_grpc as pb_grpc
     from TempoScripting import Geometry_pb2
 except ImportError as e:
+    tempo_path = _find_tempo_api_path()
     print(f"ERROR: Could not import protobuf stubs: {e}")
-    print("Make sure PYTHONPATH includes Tempo's API directory.")
-    print(f"Expected path: {_tempo_api_path}")
+    print("Make sure Tempo plugin is installed or set TEMPO_API_PATH environment variable.")
+    if tempo_path:
+        print(f"Detected path: {tempo_path}")
     sys.exit(1)
 
 

@@ -10,7 +10,18 @@ This package provides the Python-side tools for AI agents to interact with Unrea
 - gRPC client for Tempo integration
 - HTTP client as fallback
 
-**This repo is a submodule of [AgentBridge](https://github.com/Incurian/AgentBridge).**
+**This repo is a submodule of AgentBridge.**
+
+---
+
+## Path Auto-Detection
+
+The MCP server automatically finds Tempo's gRPC stubs when:
+
+1. `TEMPO_API_PATH` environment variable is set, OR
+2. Tempo plugin is at `../Tempo/` relative to AgentBridge (standard Plugins layout)
+
+See `services/base.py` for the detection logic.
 
 ---
 
@@ -39,22 +50,22 @@ registration via `SimpleRequestHandler()` for each RPC.
 
 ---
 
-## CRITICAL: Use TempoEnv Python
+## Python Environment
 
-**Must use the TempoEnv Python**, not system Python:
+Use your project's TempoEnv Python environment:
 
 ```bash
-# Correct
-D:/tempo/TempoSample/TempoEnv/Scripts/python.exe
+# Windows
+<PROJECT_ROOT>/TempoEnv/Scripts/python.exe
 
-# Wrong - will fail with grpcio/protobuf errors
-python
+# Linux/Mac
+<PROJECT_ROOT>/TempoEnv/bin/python
 ```
 
-TempoEnv contains:
-- Python 3.11
-- grpcio 1.62.2
-- protobuf 4.25.3
+TempoEnv contains the required packages:
+- Python 3.10+
+- grpcio
+- protobuf
 
 ---
 
@@ -69,14 +80,14 @@ mcp/                        # This repo (submodule at AgentBridge/mcp/)
 ├── tools.py                # Tool registry utilities
 ├── services/               # Modular service modules
 │   ├── __init__.py         # Service registry, MODULES dict, profiles
-│   ├── base.py             # Shared utilities
+│   ├── base.py             # Shared utilities, path auto-detection
 │   ├── agentbridge.py      # AgentBridge service (~57 tools)
 │   ├── tempo_*.py          # Tempo service modules (~30 tools)
 │   └── bp_toolkit.py       # Optional bp_toolkit tools (26)
 ├── agentbridge/            # HTTP client package (legacy)
 ├── tests/                  # Test files
 ├── scripts/                # Utility scripts
-├── mcp_config.json         # Claude Code config example
+├── mcp_config.example.json # Example Claude Code config
 ├── requirements.txt
 ├── pyproject.toml
 └── README.md
@@ -84,17 +95,17 @@ mcp/                        # This repo (submodule at AgentBridge/mcp/)
 
 ## MCP Server Configuration
 
-Add to Claude Code settings (`~/.claude/settings.json`):
+Copy `mcp_config.example.json` and update paths for your project:
 
 ```json
 {
   "mcpServers": {
     "agentbridge": {
-      "command": "D:/tempo/TempoSample/TempoEnv/Scripts/python.exe",
+      "command": "<PROJECT_ROOT>/TempoEnv/Scripts/python.exe",
       "args": ["-m", "mcp", "--host", "localhost", "--port", "10001"],
-      "cwd": "D:/tempo/TempoSample/Plugins/AgentBridge",
+      "cwd": "<PROJECT_ROOT>/Plugins/AgentBridge",
       "env": {
-        "PYTHONPATH": "D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo"
+        "TEMPO_API_PATH": "<PROJECT_ROOT>/Plugins/Tempo/TempoCore/Content/Python/API/tempo"
       }
     }
   }
@@ -109,15 +120,17 @@ Add to Claude Code settings (`~/.claude/settings.json`):
 
 ```bash
 # From AgentBridge plugin root (parent of mcp/)
-cd D:/tempo/TempoSample/Plugins/AgentBridge
+cd /path/to/YourProject/Plugins/AgentBridge
 
-# gRPC tests (requires editor running, port 10001)
-PYTHONPATH="D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo" \
-  D:/tempo/TempoSample/TempoEnv/Scripts/python.exe -m pytest mcp/tests/
+# Run tests (auto-detection finds Tempo)
+python -m pytest mcp/tests/
+
+# Or with explicit path
+TEMPO_API_PATH="/path/to/Tempo/TempoCore/Content/Python/API/tempo" \
+  python -m pytest mcp/tests/
 
 # Quick import check
-PYTHONPATH="D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo" \
-  D:/tempo/TempoSample/TempoEnv/Scripts/python.exe -c "from mcp.services import agentbridge; print('OK')"
+python -c "from mcp.services import agentbridge; print('OK')"
 ```
 
 ---
@@ -246,8 +259,8 @@ set_property(actor_id="/Game/Biomes/TreeAssets.TreeAssets",
 
 | Repo | Purpose |
 |------|---------|
-| [AgentBridge](https://github.com/Incurian/AgentBridge) | Unreal C++ plugin (parent repo) |
-| [bp_toolkit](https://github.com/Incurian/BP_Toolkit) | Offline Blueprint/PCG manipulation |
+| AgentBridge | Unreal C++ plugin (parent repo) |
+| bp_toolkit | Offline Blueprint/PCG manipulation |
 | [Tempo](https://github.com/tempo-sim/Tempo) | gRPC infrastructure for Unreal |
 
 ---

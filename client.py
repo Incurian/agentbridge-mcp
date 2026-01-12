@@ -8,19 +8,15 @@ import grpc
 from typing import Optional, List, Tuple, Dict, Any
 from dataclasses import dataclass
 
+# Set up Tempo API path before importing protobuf types
+# This handles auto-detection of the Tempo plugin location
+from .services.base import _setup_tempo_path
+_setup_tempo_path()
+
 # Import generated protobuf types
-# These are installed by Tempo's build process
-try:
-    from AgentBridgeServer import AgentBridge_pb2 as pb
-    from AgentBridgeServer import AgentBridge_pb2_grpc as pb_grpc
-    from TempoScripting import Empty_pb2
-except ImportError:
-    # Fallback for development - try relative import from Tempo's API
-    import sys
-    sys.path.insert(0, "D:/tempo/TempoSample/Plugins/Tempo/TempoCore/Content/Python/API/tempo")
-    from AgentBridgeServer import AgentBridge_pb2 as pb
-    from AgentBridgeServer import AgentBridge_pb2_grpc as pb_grpc
-    from TempoScripting import Empty_pb2
+from AgentBridgeServer import AgentBridge_pb2 as pb
+from AgentBridgeServer import AgentBridge_pb2_grpc as pb_grpc
+from TempoScripting import Empty_pb2
 
 
 @dataclass

@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "Incurian"}
+    {name = "AgentBridge Contributors"}
 ]
 keywords = ["mcp", "unreal", "grpc", "ai", "agents"]
 classifiers = [
@@ -37,8 +37,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Incurian/agentbridge-mcp"
-Repository = "https://github.com/Incurian/agentbridge-mcp"
+# Update these URLs when publishing
+# Homepage = "https://github.com/your-org/agentbridge-mcp"
+# Repository = "https://github.com/your-org/agentbridge-mcp"
 
 [project.scripts]
 agentbridge-mcp = "mcp.server:main"
