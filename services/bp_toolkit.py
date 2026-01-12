@@ -57,8 +57,8 @@ if BP_TOOLKIT_PATH:
         sys.path.insert(0, str(scripts_path))
 
     TOOLS = [
-        {"name": "bp_export_asset", "description": "Export a uasset file to JSON using UAssetGUI. Returns the JSON path on success.", "inputSchema": {"type": "object", "properties": {"uasset_path": {"type": "string"}, "ue_version": {"type": "string"}}, "required": ["uasset_path"]}},
-        {"name": "bp_import_asset", "description": "Import modified JSON back to uasset format using UAssetGUI.", "inputSchema": {"type": "object", "properties": {"json_path": {"type": "string"}, "ue_version": {"type": "string"}}, "required": ["json_path"]}},
+        {"name": "bp_export_asset", "description": "Export a uasset file to JSON using UAssetGUI. Returns the JSON path on success. NOTE: Use Windows paths (D:/folder/file.uasset), not WSL/Linux paths (/mnt/d/...).", "inputSchema": {"type": "object", "properties": {"uasset_path": {"type": "string"}, "ue_version": {"type": "string"}}, "required": ["uasset_path"]}},
+        {"name": "bp_import_asset", "description": "Import modified JSON back to uasset format using UAssetGUI. NOTE: Use Windows paths.", "inputSchema": {"type": "object", "properties": {"json_path": {"type": "string"}, "ue_version": {"type": "string"}}, "required": ["json_path"]}},
         {"name": "bp_detect_type", "description": "Detect the type of a UAssetAPI JSON export (Blueprint, PCGGraph, DataAsset, BehaviorTree, Material, etc.)", "inputSchema": {"type": "object", "properties": {"json_path": {"type": "string"}}, "required": ["json_path"]}},
         {"name": "bp_get_info", "description": "Get info about an asset JSON (type, exports count, graphs, namemap size)", "inputSchema": {"type": "object", "properties": {"json_path": {"type": "string"}}, "required": ["json_path"]}},
         {"name": "bp_list_properties", "description": "List all properties in an asset export with their types and values", "inputSchema": {"type": "object", "properties": {"json_path": {"type": "string"}, "export_index": {"type": "integer"}}, "required": ["json_path"]}},

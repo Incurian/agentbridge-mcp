@@ -18,13 +18,13 @@ from TempoScripting import Empty_pb2
 
 
 TOOLS = [
-    {"name": "play_in_editor", "description": "Start Play-In-Editor (PIE) session.", "inputSchema": {"type": "object"}},
-    {"name": "simulate", "description": "Start Simulate mode in the editor.", "inputSchema": {"type": "object"}},
+    {"name": "play_in_editor", "description": "Start Play-In-Editor (PIE) session. Use this to enable Tempo simulation tools.", "inputSchema": {"type": "object"}},
+    {"name": "simulate", "description": "Start Simulate mode in the editor. Enables physics simulation without player control.", "inputSchema": {"type": "object"}},
     {"name": "stop", "description": "Stop the current PIE or Simulate session.", "inputSchema": {"type": "object"}},
-    {"name": "save_level", "description": "Save the current level to a file.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "overwrite": {"type": "boolean", "default": False}}, "required": ["path"]}},
-    {"name": "open_level", "description": "Open a level in the editor.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
-    {"name": "new_level", "description": "Create a new empty level in the editor.", "inputSchema": {"type": "object"}},
-    {"name": "get_current_level", "description": "Get the name of the currently loaded level.", "inputSchema": {"type": "object"}},
+    {"name": "save_level", "description": "Save the current level to a file. REQUIRES: TempoCoreEditor service.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}, "overwrite": {"type": "boolean", "default": False}}, "required": ["path"]}},
+    {"name": "open_level", "description": "Open a level in the editor. REQUIRES: TempoCoreEditor service.", "inputSchema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
+    {"name": "new_level", "description": "Create a new empty level in the editor. REQUIRES: TempoCoreEditor service.", "inputSchema": {"type": "object"}},
+    {"name": "get_current_level", "description": "Get the name of the currently loaded level. REQUIRES: TempoCoreEditor service.", "inputSchema": {"type": "object"}},
 ]
 
 

@@ -1772,6 +1772,12 @@ def _get_help_text(topic: str = "") -> Dict[str, Any]:
     overview = """
 AgentBridge - Unreal Engine control for AI agents
 
+BEFORE YOU START:
+- AgentBridge core tools (query_actors, spawn_actor, set_property) work in Editor mode
+- Tempo simulation tools (tempo_*) require Play-In-Editor (PIE) mode - run play_in_editor first
+- bp_toolkit offline tools require Windows paths (D:/folder/file.uasset), not WSL (/mnt/d/...)
+- File tools (read_project_file, etc.) use paths relative to the Unreal project root
+
 QUICK START:
 1. query_actors - Find actors in the scene (e.g., name_pattern="Light*")
 2. spawn_actor - Create new actors (e.g., class_name="PointLight", location=[0,0,500])
@@ -3292,6 +3298,82 @@ def _execute_impl(client: AgentBridgeClient, tool_name: str, args: Dict[str, Any
             "input_pin_label": "In",  # InputNode's output pin is labeled "In"
             "output_node": output_node,
             "output_pin_label": "Out",  # OutputNode's input pin is labeled "Out"
+        }
+
+    # =========================================================================
+    # File Operations (P1)
+    # =========================================================================
+    elif tool_name == "read_project_file":
+        result = safe_call(
+            client.read_project_file,
+            relative_path=args["relative_path"],
+            as_base64=args.get("as_base64", False),
+        )
+        if isinstance(result, dict) and "error" in result:
+            return result
+        return {
+            "success": result.success,
+            "error_message": result.error_message if not result.success else None,
+            "content": result.content,
+            "file_size": result.file_size,
+            "is_binary": result.is_binary,
+        }
+
+    elif tool_name == "write_project_file":
+        result = safe_call(
+            client.write_project_file,
+            relative_path=args["relative_path"],
+            content=args["content"],
+            is_base64=args.get("is_base64", False),
+            create_directories=args.get("create_directories", True),
+            append=args.get("append", False),
+        )
+        if isinstance(result, dict) and "error" in result:
+            return result
+        return {
+            "success": result.success,
+            "error_message": result.error_message if not result.success else None,
+            "bytes_written": result.bytes_written,
+        }
+
+    elif tool_name == "list_project_directory":
+        result = safe_call(
+            client.list_project_directory,
+            relative_path=args.get("relative_path", ""),
+            pattern=args.get("pattern", ""),
+            recursive=args.get("recursive", False),
+            limit=args.get("limit", 100),
+        )
+        if isinstance(result, dict) and "error" in result:
+            return result
+        files = []
+        for f in result.files:
+            files.append({
+                "name": f.name,
+                "relative_path": f.relative_path,
+                "is_directory": f.is_directory,
+                "size": f.size,
+            })
+        return {
+            "success": result.success,
+            "error_message": result.error_message if not result.success else None,
+            "files": files,
+            "total_count": result.total_count,
+        }
+
+    elif tool_name == "copy_project_file":
+        result = safe_call(
+            client.copy_project_file,
+            source_path=args["source_path"],
+            dest_path=args["dest_path"],
+            overwrite=args.get("overwrite", False),
+        )
+        if isinstance(result, dict) and "error" in result:
+            return result
+        return {
+            "success": result.success,
+            "error_message": result.error_message if not result.success else None,
+            "dest_full_path": result.dest_full_path,
         }
 
     else:

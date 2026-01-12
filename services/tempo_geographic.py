@@ -15,11 +15,11 @@ from TempoScripting import Empty_pb2
 
 
 TOOLS = [
-    {"name": "tempo_set_date", "description": "Set the simulation date.", "inputSchema": {"type": "object", "properties": {"day": {"type": "integer"}, "month": {"type": "integer"}, "year": {"type": "integer"}}, "required": ["day", "month", "year"]}},
-    {"name": "tempo_set_time_of_day", "description": "Set the simulation time of day.", "inputSchema": {"type": "object", "properties": {"hour": {"type": "integer"}, "minute": {"type": "integer"}, "second": {"type": "integer", "default": 0}}, "required": ["hour", "minute"]}},
-    {"name": "tempo_set_day_cycle_rate", "description": "Set the day/night cycle speed relative to real time. 1.0 = real time, 60.0 = 1 hour per minute.", "inputSchema": {"type": "object", "properties": {"rate": {"type": "number"}}, "required": ["rate"]}},
-    {"name": "tempo_get_datetime", "description": "Get the current simulation date and time.", "inputSchema": {"type": "object"}},
-    {"name": "tempo_set_geographic_reference", "description": "Set the geographic reference point (lat/lon/alt) for the simulation world.", "inputSchema": {"type": "object", "properties": {"latitude": {"type": "number"}, "longitude": {"type": "number"}, "altitude": {"type": "number", "default": 0}}, "required": ["latitude", "longitude"]}},
+    {"name": "tempo_set_date", "description": "Set the simulation date. REQUIRES: Tempo Geographic service (typically needs PIE/runtime).", "inputSchema": {"type": "object", "properties": {"day": {"type": "integer"}, "month": {"type": "integer"}, "year": {"type": "integer"}}, "required": ["day", "month", "year"]}},
+    {"name": "tempo_set_time_of_day", "description": "Set the simulation time of day. REQUIRES: Tempo Geographic service (typically needs PIE/runtime).", "inputSchema": {"type": "object", "properties": {"hour": {"type": "integer"}, "minute": {"type": "integer"}, "second": {"type": "integer", "default": 0}}, "required": ["hour", "minute"]}},
+    {"name": "tempo_set_day_cycle_rate", "description": "Set the day/night cycle speed relative to real time. 1.0 = real time, 60.0 = 1 hour per minute. REQUIRES: Tempo Geographic service.", "inputSchema": {"type": "object", "properties": {"rate": {"type": "number"}}, "required": ["rate"]}},
+    {"name": "tempo_get_datetime", "description": "Get the current simulation date and time. REQUIRES: Tempo Geographic service (typically needs PIE/runtime).", "inputSchema": {"type": "object"}},
+    {"name": "tempo_set_geographic_reference", "description": "Set the geographic reference point (lat/lon/alt) for the simulation world. REQUIRES: Tempo Geographic service.", "inputSchema": {"type": "object", "properties": {"latitude": {"type": "number"}, "longitude": {"type": "number"}, "altitude": {"type": "number", "default": 0}}, "required": ["latitude", "longitude"]}},
 ]
 
 
