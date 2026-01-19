@@ -1,0 +1,14 @@
+# Requirements for LangChain integration with AgentBridge MCP
+#
+# Install with:
+#   pip install -r requirements-langchain.txt
+
+# Core LangChain MCP adapter
+langchain-mcp-adapters>=0.1.0
+
+# LangGraph for agent creation
+langgraph>=0.2.0
+
+# Choose your LLM provider (uncomment one or both):
+langchain-anthropic>=0.3.0  # For Claude models
+# langchain-openai>=0.3.0   # For GPT models
