@@ -22,6 +22,21 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# LangChain imports
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+
+# LLM providers (import both, use based on --provider flag)
+try:
+    from langchain_anthropic import ChatAnthropic
+except ImportError:
+    ChatAnthropic = None
+
+try:
+    from langchain_openai import ChatOpenAI
+except ImportError:
+    ChatOpenAI = None
+
 # Determine paths relative to this file
 SCRIPT_DIR = Path(__file__).parent
 MCP_DIR = SCRIPT_DIR.parent  # mcp/
@@ -94,15 +109,14 @@ async def create_agent(
     Returns:
         Tuple of (agent, client) - client must be kept alive while agent is used
     """
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-    from langgraph.prebuilt import create_react_agent
-
     # Create LLM based on provider
     if provider == "anthropic":
-        from langchain_anthropic import ChatAnthropic
+        if ChatAnthropic is None:
+            raise ImportError("langchain-anthropic not installed. Run: pip install langchain-anthropic")
         llm = ChatAnthropic(model=model)
     elif provider == "openai":
-        from langchain_openai import ChatOpenAI
+        if ChatOpenAI is None:
+            raise ImportError("langchain-openai not installed. Run: pip install langchain-openai")
         llm = ChatOpenAI(model=model)
     else:
         raise ValueError(f"Unknown provider: {provider}. Use 'anthropic' or 'openai'")
@@ -201,8 +215,6 @@ async def simple_tool_example():
     Demonstrates using MCP tools directly without a full agent.
     This is useful for programmatic access to specific tools.
     """
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-
     config = get_mcp_client_config(profile="standard")
 
     async with MultiServerMCPClient(config) as client:
@@ -237,8 +249,6 @@ async def batch_spawn_example():
     """
     Demonstrates spawning multiple actors programmatically.
     """
-    from langchain_mcp_adapters.client import MultiServerMCPClient
-
     config = get_mcp_client_config(profile="standard")
 
     async with MultiServerMCPClient(config) as client:

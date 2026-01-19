@@ -9,6 +9,6 @@ langchain-mcp-adapters>=0.1.0
 # LangGraph for agent creation
 langgraph>=0.2.0
 
-# Choose your LLM provider (uncomment one or both):
-langchain-anthropic>=0.3.0  # For Claude models
-# langchain-openai>=0.3.0   # For GPT models
+# LLM providers - install at least one:
+langchain-anthropic>=0.3.0  # For Claude models (--provider anthropic)
+langchain-openai>=0.3.0     # For GPT models (--provider openai)
