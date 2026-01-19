@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentbridge-mcp"
-version = "0.2.0"
+dynamic = ["version"]
 description = "MCP server for AI agent integration with Unreal Engine via AgentBridge"
 readme = "README.md"
 license = {text = "MIT"}
@@ -12,16 +12,20 @@ requires-python = ">=3.10"
 authors = [
     {name = "AgentBridge Contributors"}
 ]
-keywords = ["mcp", "unreal", "grpc", "ai", "agents"]
+keywords = ["mcp", "unreal", "grpc", "ai", "agents", "llm", "claude"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Games/Entertainment",
+    "Typing :: Typed",
 ]
 
 dependencies = [
@@ -31,21 +35,202 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
+# Testing - pytest and plugins
+test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-timeout>=2.1.0",
+]
+
+# Linting - ruff replaces black, flake8, isort
+lint = [
+    "ruff>=0.1.0",
+]
+
+# Type checking - mypy with stubs for dependencies
+type = [
+    "mypy>=1.0.0",
+    "grpc-stubs>=1.53.0",
+    "types-protobuf>=4.21.0",
+    "types-requests>=2.28.0",
+]
+
+# Local development - all tools
+dev = [
+    "agentbridge-mcp[test,lint,type]",
+]
+
+# CI - explicit combined list (avoids recursive reference issues in some pip versions)
+ci = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-timeout>=2.1.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "grpc-stubs>=1.53.0",
+    "types-protobuf>=4.21.0",
+    "types-requests>=2.28.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
 
 [project.urls]
-# Update these URLs when publishing
-# Homepage = "https://github.com/your-org/agentbridge-mcp"
-# Repository = "https://github.com/your-org/agentbridge-mcp"
+# Update these URLs for your GitLab instance
+Homepage = "https://gitlab.com/your-org/agentbridge"
+Repository = "https://gitlab.com/your-org/agentbridge"
+Documentation = "https://gitlab.com/your-org/agentbridge/-/blob/main/mcp/README.md"
+Issues = "https://gitlab.com/your-org/agentbridge/-/issues"
 
 [project.scripts]
 agentbridge-mcp = "mcp.server:main"
 
+# ============================================================================
+# SETUPTOOLS
+# ============================================================================
+
 [tool.setuptools]
-packages = ["mcp", "mcp.services", "agentbridge"]
+packages = ["mcp", "mcp.services", "mcp.tests", "agentbridge"]
+
+[tool.setuptools.dynamic]
+version = {attr = "mcp.__version__"}
 
 [tool.setuptools.package-data]
-"*" = ["*.json"]
+"*" = ["*.json", "py.typed"]
+
+# ============================================================================
+# PYTEST
+# ============================================================================
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests that don't require external services",
+    "integration: Integration tests requiring Unreal Engine running",
+    "slow: Tests that take more than 10 seconds",
+]
+addopts = [
+    "-v",
+    "--tb=short",
+    "-m", "not integration",
+    "--timeout=60",
+]
+asyncio_mode = "auto"
+minversion = "7.0"
+filterwarnings = [
+    "ignore::DeprecationWarning:grpc.*:",
+    "ignore::DeprecationWarning:google.protobuf.*:",
+]
+
+# ============================================================================
+# RUFF (replaces black, flake8, isort, pyupgrade)
+# ============================================================================
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "*_pb2.py",
+    "*_pb2_grpc.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in argument defaults
+    "B904",   # raise without from
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mcp", "agentbridge"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["S101"]
+"**/test_*.py" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# ============================================================================
+# MYPY
+# ============================================================================
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+strict_equality = true
+show_error_codes = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+exclude = [
+    "build/",
+    "dist/",
+    ".*_pb2\\.py$",
+    ".*_pb2_grpc\\.py$",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "grpc.*",
+    "google.protobuf.*",
+    "AgentBridgeServer.*",
+    "TempoScripting.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["mcp.server", "mcp.client", "agentbridge.types"]
+disallow_untyped_defs = true
+warn_return_any = true
+
+# ============================================================================
+# COVERAGE
+# ============================================================================
+
+[tool.coverage.run]
+branch = true
+source = ["mcp", "agentbridge"]
+omit = [
+    "*/tests/*",
+    "*_pb2.py",
+    "*_pb2_grpc.py",
+    "mcp/scripts/*",
+]
+
+[tool.coverage.report]
+fail_under = 50
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+]
+show_missing = true

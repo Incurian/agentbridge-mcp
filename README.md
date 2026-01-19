@@ -27,6 +27,15 @@ git submodule update --init --recursive
 pip install -e /path/to/agentbridge-mcp
 ```
 
+> **Note on naming:** The PyPI package is `agentbridge-mcp`, but the Python import is `mcp`:
+> ```python
+> # Install: pip install agentbridge-mcp
+> # Import:
+> from mcp import serve
+> from mcp.services import agentbridge
+> ```
+> This follows common Python convention (like `pip install Pillow` → `import PIL`).
+
 ## Requirements
 
 - Python 3.10+

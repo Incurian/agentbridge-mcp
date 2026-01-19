@@ -9,6 +9,7 @@ Requires the Unreal Editor to be running with the AgentBridge plugin loaded.
 Uses HTTP fallback (port 8080) instead of gRPC.
 """
 
+import pytest
 import sys
 from pathlib import Path
 
@@ -19,6 +20,10 @@ if str(_mcp_dir) not in sys.path:
     sys.path.insert(0, str(_mcp_dir))
 
 from agentbridge import AgentBridgeClient, AgentBridgeError
+
+
+# Mark all tests in this module as integration tests (require Unreal Engine running)
+pytestmark = pytest.mark.integration
 
 
 def main():

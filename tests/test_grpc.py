@@ -14,6 +14,7 @@ Or with TEMPO_API_PATH set:
     TEMPO_API_PATH=/path/to/Tempo/TempoCore/Content/Python/API/tempo python test_grpc.py
 """
 
+import pytest
 import sys
 import os
 import argparse
@@ -44,6 +45,10 @@ except ImportError as e:
     if tempo_path:
         print(f"Detected path: {tempo_path}")
     sys.exit(1)
+
+
+# Mark all tests in this module as integration tests (require Unreal Engine running)
+pytestmark = pytest.mark.integration
 
 
 class Colors:
