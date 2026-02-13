@@ -720,6 +720,8 @@ class AgentBridgeClient:
     """Client for AgentBridge gRPC service."""
 
     def __init__(self, host: str = "localhost", port: int = 50051):
+        self.host = host
+        self.port = port
         self.channel = create_channel(host, port)
         self.stub = pb_grpc.AgentBridgeServiceStub(self.channel)
 
@@ -1329,19 +1331,26 @@ def _normalize_property_value(value: any, property_hint: str = "") -> str:
     # List/tuple - determine type from hint or length
     if isinstance(value, (list, tuple)):
         if len(value) == 3:
-            # 3 elements - could be vector, color (RGB), or rotator
-            v = [float(x) for x in value]
-            if is_color_hint:
-                return f"(R={v[0]},G={v[1]},B={v[2]},A=1.0)"
-            elif is_rotation_hint:
-                return f"(Pitch={v[0]},Yaw={v[1]},Roll={v[2]})"
-            else:
-                # Default to vector for 3-element list
-                return f"(X={v[0]},Y={v[1]},Z={v[2]})"
+            # 3 elements - could be vector, color (RGB), rotator, or generic array
+            try:
+                v = [float(x) for x in value]
+                if is_color_hint:
+                    return f"(R={v[0]},G={v[1]},B={v[2]},A=1.0)"
+                elif is_rotation_hint:
+                    return f"(Pitch={v[0]},Yaw={v[1]},Roll={v[2]})"
+                else:
+                    # Default to vector for 3-element numeric list
+                    return f"(X={v[0]},Y={v[1]},Z={v[2]})"
+            except (ValueError, TypeError):
+                # Non-numeric elements (e.g. ["Tag1", "Tag2", "Tag3"])
+                return json.dumps(value)
         elif len(value) == 4:
-            # 4 elements - assume color (RGBA)
-            v = [float(x) for x in value]
-            return f"(R={v[0]},G={v[1]},B={v[2]},A={v[3]})"
+            # 4 elements - assume color (RGBA) if numeric, else generic array
+            try:
+                v = [float(x) for x in value]
+                return f"(R={v[0]},G={v[1]},B={v[2]},A={v[3]})"
+            except (ValueError, TypeError):
+                return json.dumps(value)
         else:
             # Other array - return as JSON string (NOT str() which uses single quotes!)
             # C++ JsonToPropertyValue expects valid JSON with double quotes
@@ -2952,6 +2961,7 @@ def _execute_impl(client: AgentBridgeClient, tool_name: str, args: Dict[str, Any
             "extent": [result.extent.x, result.extent.y, result.extent.z],
             "proxy_count": result.proxy_count,
             "landscape_name": result.landscape_name,
+            "biome_volume_scale": [result.biome_volume_scale.x, result.biome_volume_scale.y, result.biome_volume_scale.z],
         }
 
     elif tool_name == "get_data_layers":
