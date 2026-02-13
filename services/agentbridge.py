@@ -2137,110 +2137,118 @@ Working with project files:
 2. read_project_file("Config/DefaultGame.ini") - Read config
 3. write_project_file("Saved/MyBackup.json", '{"key": "value"}') - Write data
 
-PCG BIOME WORKFLOW (Complete with DataAssets):
-Setting up procedural content generation with biomes:
+PCG BIOME WORKFLOW (Texture-Based Biomes):
+Setting up procedural content generation with biomes. Each biome maps a
+color channel in a texture to a set of meshes spawned via PCG.
 
-1. Get landscape bounds:
+Architecture:
+  BiomeCore (1 per level)          BiomeTexture (1 per biome)
+  +-- Volume (box bounds)          +-- BiomeTextureVolume (box bounds)
+  +-- PCG Component                +-- Definition -> BiomeDefinitionTemplate
+                                   +-- Assets[] -> BiomeAssetTemplate[]
+                                   +-- PCG_LocalBiomeCore (regen trigger)
+
+Phase 1 - Get landscape bounds:
    bounds = get_landscape_bounds()
-   # Returns: center, half_extents, min, max
+   # Returns: center, extent, min, max, biome_volume_scale
+   # biome_volume_scale: pre-computed scale for 100-unit-extent BoxComponent
+   #   to cover landscape (Z includes +10000 headroom)
 
-2. Spawn biome actors at landscape center:
-   spawn_actor(class_name="BP_PCGBiomeCore",
-               location=bounds["center"], label="MyBiomeCore")
-   spawn_actor(class_name="BP_PCGBiomeVolume",
-               location=bounds["center"], label="MyBiomeVolume")
+Phase 2 - Duplicate template DataAssets:
+   # IMPORTANT: duplicate from /Game/ copies, NOT plugin paths (crash risk)
+   duplicate_asset(source_path="/Game/PCGBiomes/Templates/DefaultDefinition",
+       dest_package_path="/Game/PCGBiomes/Definitions", dest_asset_name="ForestBiome")
+   duplicate_asset(source_path="/Game/PCGBiomes/Templates/DefaultAsset",
+       dest_package_path="/Game/PCGBiomes/Assets", dest_asset_name="ForestAssets")
 
-3. Size the volumes (ALWAYS verify component names first!):
-   get_actor(actor_id="MyBiomeVolume", include_components=True)  # Find components
+Phase 3 - Configure BiomeDefinition DataAsset:
+   set_property(actor_id="/Game/PCGBiomes/Definitions/ForestBiome.ForestBiome",
+       path="BiomeDefinition.BiomeName", value="Forest")
+   set_property(..., path="BiomeDefinition.BiomePriority", value=1)
+   set_property(..., path="BiomeDefinition.BiomeColor",
+       value="(R=0,G=1,B=0,A=1)")
+   # Note: Colors written as FLinearColor (0-1), read back as FColor (0-255)
 
-   set_property(actor_id="MyBiomeVolume",
-       path="BiomeVolume.BoxExtent",
-       value=f"(X={bounds['half_extents'][0]},Y={bounds['half_extents'][1]},Z={bounds['half_extents'][2] + 5000})")
+Phase 4 - Configure BiomeAsset DataAsset (two-step for object refs):
+   set_property(actor_id="/Game/PCGBiomes/Assets/ForestAssets.ForestAssets",
+       path="BiomeAssets",
+       value='[{"Enabled":true, "AssetType":"Mesh", "Weight":1.0}]')
+   # Then set object references individually
+   set_property(..., path="BiomeAssets[0].Mesh",
+       value="/Game/Foliage/SM_Tree.SM_Tree")
 
-   set_property(actor_id="MyBiomeVolume",
-       path="BiomeVolume.RelativeScale3D", value="(X=1,Y=1,Z=1)")
+Phase 5 - Save DataAssets:
+   save_asset(asset_path="/Game/PCGBiomes/Definitions/ForestBiome")
+   save_asset(asset_path="/Game/PCGBiomes/Assets/ForestAssets")
 
-4. Create and configure BiomeDefinition DataAsset:
-   create_asset(asset_class="BiomeDefinitionTemplate",
-                package_path="/Game/Biomes", asset_name="ForestBiome")
+Phase 6 - Spawn actors at landscape center:
+   spawn_actor(class_name="/Game/PCGBiomes/Templates/BP_PCGBiomeCore.BP_PCGBiomeCore",
+       location=bounds["center"], label="BiomeCore")
+   spawn_actor(class_name="/Game/PCGBiomes/Templates/BP_PCGBiomeTexture.BP_PCGBiomeTexture",
+       location=bounds["center"], label="ForestBiomeTexture")
+   # Use full /Game/ class paths for Blueprint classes
 
-   # Use asset path as actor_id to set DataAsset properties!
-   set_property(actor_id="/Game/Biomes/ForestBiome.ForestBiome",
-                path="BiomeDefinition.BiomeName", value="Forest")
-   set_property(actor_id="/Game/Biomes/ForestBiome.ForestBiome",
-                path="BiomeDefinition.BiomePriority", value=10)
-   set_property(actor_id="/Game/Biomes/ForestBiome.ForestBiome",
-                path="BiomeDefinition.BiomeColor",
-                value="(R=0.2,G=0.6,B=0.1,A=1.0)")
+Phase 7 - Size volumes using set_transform + biome_volume_scale:
+   scale = bounds["biome_volume_scale"]  # e.g., [2040, 2040, 101]
+   set_transform(target="BiomeCore->Volume", scale=scale, world_space=true)
+   set_transform(target="ForestBiomeTexture->BiomeTextureVolume",
+       scale=scale, world_space=true)
+   # Do NOT use set_property on BoxExtent - stores value but no visual update
 
-   save_asset(asset_path="/Game/Biomes/ForestBiome")
+Phase 8 - Assign references on each BiomeTexture:
+   set_property(actor_id="ForestBiomeTexture", path="BiomeTexture",
+       value="/Game/Textures/BiomeMap.BiomeMap")
+   set_property(actor_id="ForestBiomeTexture", path="Definition",
+       value="/Game/PCGBiomes/Definitions/ForestBiome.ForestBiome")
+   set_property(actor_id="ForestBiomeTexture", path="Assets",
+       value='["/Game/PCGBiomes/Assets/ForestAssets.ForestAssets"]')
 
-5. Create and configure BiomeAsset DataAsset:
-   create_asset(asset_class="BiomeAssetTemplate",
-                package_path="/Game/Biomes", asset_name="TreeAssets")
+Phase 9 - Verify references:
+   get_property(actor_id="ForestBiomeTexture", path="Definition")
+   get_property(actor_id="ForestBiomeTexture", path="Assets")
+   get_transform(target="ForestBiomeTexture->BiomeTextureVolume")
 
-   # Two-step process: create array element first (no object refs)
-   set_property(actor_id="/Game/Biomes/TreeAssets.TreeAssets",
-                path="BiomeAssets",
-                value='[{"Enabled":true, "AssetType":"Mesh", "Weight":1.0}]')
+Phase 10 - Trigger PCG regeneration:
+   call_function(call="ForestBiomeTexture.PCG_LocalBiomeCore.NotifyPropertiesChangedFromBlueprint")
+   # MUST target BiomeTexture's PCG_LocalBiomeCore, NOT the top-level BiomeCore
 
-   # Then set object reference separately
-   set_property(actor_id="/Game/Biomes/TreeAssets.TreeAssets",
-                path="BiomeAssets[0].Mesh",
-                value="/Game/Foliage/SM_Tree.SM_Tree")
+BIOME ASSET MODIFICATION (after initial setup):
+   set_property(..., path="BiomeAssets[0].Weight", value=2.5)
+   set_property(..., path="BiomeAssets[0].Mesh", value="/Game/Mesh.Mesh")
+   set_property(..., path="BiomeAssets[0].AssetOptions.Scale", value="(X=3,Y=3,Z=3)")
+   # Then save_asset + call_function to trigger regen (Phase 10)
+   # 3-level nesting works: BiomeAssets[0].AssetOptions.Scale
 
-   save_asset(asset_path="/Game/Biomes/TreeAssets")
+KEY SUB-STRUCT FIELDS:
+   AssetOptions.Scale (FVector) - Mesh size (default 1,1,1)
+   AssetOptions.Translation/Rotation - Placement offset
+   MeshOptions.CastShadow (bool), .Visible (bool), .Material (ref)
+   FilterOptions.DensityMin/DensityMax, .HeightMin/.HeightMax
+   RuntimeOptions.ScaleMultiplier, .MeshSamplingRadius
+   DebugOptions.Isolate (bool), .ShowBounds (bool)
 
-6. Link DataAssets to the biome volume:
-   set_property(actor_id="MyBiomeVolume", path="Definition",
-                value="/Game/Biomes/ForestBiome.ForestBiome")
+BIOME COLOR TOLERANCE TROUBLESHOOTING:
+If no content spawns after setup, check BiomeColorTolerance on each BiomeTexture:
+1. Try BiomeColorTolerance = 0.1 (catches minor imprecision)
+2. Try 0.5 (catches major mismatches)
+3. Try 0.99 (sanity check - if this fails, not a color issue)
+Default 0.01 is very tight - 0.1 is often more practical.
 
-   set_property(actor_id="MyBiomeVolume", path="Assets",
-                value='["/Game/Biomes/TreeAssets.TreeAssets"]')
+FUNCTION CALLS:
+call_function supports zero-arg void functions only (instance methods on actors/components).
+Useful for NotifyPropertiesChangedFromBlueprint() for PCG regeneration.
+For parameterized operations, use set_property, set_transform, or console commands.
 
-7. PCG generation runs automatically or on editor interaction.
-
-FUNCTION CALL LIMITATIONS:
-tempo_call_function only supports functions with NO parameters and void return.
-For functions like PCGComponent.Generate(bForce), use property setters instead
-(e.g., set bRegenerateInEditor = true) or trigger via console commands.
-
-SIZING VOLUMES TO LANDSCAPE - KEY PROPERTIES:
-When you need to size a BoxComponent volume (PCGVolume, TriggerVolume, etc.):
-
-1. Get bounds:
-   bounds = get_landscape_bounds()
-   # center: [X, Y, Z] center point
-   # half_extents: [X, Y, Z] half-size in each axis
-   # min: [X, Y, Z] minimum corner
-   # max: [X, Y, Z] maximum corner
-
-2. Find the component name:
-   get_actor(actor_id="MyVolume", include_components=True)
-   # Common names: "Volume", "BoxComponent0", "CollisionComponent"
-   # WARNING: BP classes may use custom names! E.g., BP_PCGBiomeVolume uses "BiomeVolume"
-   # ALWAYS verify component names first!
-
-3. Set BoxExtent (HALF-SIZE in Unreal units/cm):
-   set_property(actor_id="MyVolume", path="Volume.BoxExtent",
-       value="(X=1000,Y=1000,Z=500)")
-   # This creates a 2000x2000x1000 volume!
-
-4. Reset scale when using BoxExtent:
-   set_property(actor_id="MyVolume", path="Volume.RelativeScale3D",
-       value="(X=1,Y=1,Z=1)")
-
-COMMON MISTAKES:
-- Using class name "BoxComponent" instead of instance name "Volume"
-- Forgetting BoxExtent is HALF the total size
-- Not resetting scale when manually setting BoxExtent
-- Forgetting Z margin for PCG spawn variation
+VOLUME COMPONENT NAMES:
+| Blueprint           | Component Name        |
+| BP_PCGBiomeCore     | Volume                |
+| BP_PCGBiomeTexture  | BiomeTextureVolume    |
 
 TIPS:
-- Use get_landscape_bounds() to size PCG volumes correctly
-- Create DataAssets with initial properties via create_asset()
+- Use get_landscape_bounds() with biome_volume_scale for easy volume sizing
 - Use label_pattern to find PCG-spawned actors
-- PCG regeneration may require editor commands or level reload
+- Always verify component names with get_actor(include_components=True)
+- Use full /Game/ asset paths for Blueprint class spawning
 """,
         # Aliases for specific workflow sub-topics
         "pcg_volume": """
@@ -2248,101 +2256,95 @@ PCG VOLUME TYPES:
 
 There are different PCG volume types with different component structures:
 
-NATIVE PCGVolume (NOT recommended for biomes):
+BP_PCGBiomeCore (main biome system, 1 per level):
+  - Uses BoxComponent named "Volume"
+  - Contains BiomeCore PCGComponent
+  - spawn_actor(class_name="BP_PCGBiomeCore", ...)
+
+BP_PCGBiomeTexture (1 per biome, RECOMMENDED):
+  - Uses BoxComponent named "BiomeTextureVolume"
+  - Has Definition, Assets, BiomeTexture properties
+  - Contains PCG_LocalBiomeCore (trigger regen here!)
+  - spawn_actor(class_name="BP_PCGBiomeTexture", ...)
+
+Native PCGVolume (NOT recommended for biomes):
   - Uses BrushComponent (harder to resize programmatically)
   - spawn_actor(class_name="PCGVolume", ...)
   - Component name: "BrushComponent0"
 
-BP_PCGBiomeVolume (RECOMMENDED for biomes):
-  - Uses BoxComponent named "BiomeVolume"
-  - spawn_actor(class_name="BP_PCGBiomeVolume", ...)
-  - Has Definition, Assets, DefaultDefinition, LocalAssets properties
-  - Component name: "BiomeVolume"
+SIZING VOLUMES - USE set_transform (NOT set_property on BoxExtent):
 
-BP_PCGBiomeCore (main biome system):
-  - Uses BoxComponent named "Volume"
-  - Contains BiomeCore PCGComponent
-  - spawn_actor(class_name="BP_PCGBiomeCore", ...)
-  - Component name: "Volume"
+set_property on BoxExtent stores values but does NOT trigger visual/bounds updates.
+The default BoxExtent for both BP types is [100, 100, 100]. Use scale instead.
 
-SIZING BP VOLUMES:
-
-1. GET LANDSCAPE BOUNDS:
+1. GET LANDSCAPE BOUNDS + biome_volume_scale:
    bounds = get_landscape_bounds()
-   # Returns: center, half_extents, min, max
+   scale = bounds["biome_volume_scale"]  # Pre-computed, includes Z headroom
 
-2. SPAWN THE VOLUME:
-   spawn_actor(class_name="BP_PCGBiomeVolume", location=bounds["center"],
-               label="MyBiomeVolume")
+2. APPLY SCALE VIA set_transform:
+   set_transform(target="BiomeCore->Volume", scale=scale, world_space=true)
+   set_transform(target="ForestBiomeTexture->BiomeTextureVolume",
+       scale=scale, world_space=true)
 
-3. ALWAYS VERIFY COMPONENT NAME FIRST:
-   get_actor(actor_id="MyBiomeVolume", include_components=True)
-   # Returns: "BiomeVolume" for BP_PCGBiomeVolume
-   # Returns: "Volume" for BP_PCGBiomeCore
+MANUAL CALCULATION (if biome_volume_scale not available):
+   sx = bounds["extent"][0] / 100
+   sy = bounds["extent"][1] / 100
+   sz = (bounds["extent"][2] + 10000) / 100  # Z with headroom
+   set_transform(target="...", scale=[sx, sy, sz], world_space=true)
 
-4. SET BOXEXTENT (CRITICAL - this is HALF-SIZE!):
-   set_property(actor_id="MyBiomeVolume", path="BiomeVolume.BoxExtent",
-       value=f"(X={bounds['half_extents'][0]},Y={bounds['half_extents'][1]},Z={bounds['half_extents'][2] + 5000})")
-
-   # BoxExtent is HALF the actual volume size!
-   # A BoxExtent of [1000, 1000, 500] creates a 2000x2000x1000 volume
-
-5. RESET SCALE (when using BoxExtent directly):
-   set_property(actor_id="MyBiomeVolume", path="BiomeVolume.RelativeScale3D",
-       value="(X=1,Y=1,Z=1)")
-
-WHY ADD Z MARGIN?
-PCG spawns content within the volume. Add 5000+ units to Z so spawned
-objects can vary in height above the terrain surface.
+VOLUME COMPONENT NAMES:
+| Blueprint           | Component Name        |
+| BP_PCGBiomeCore     | Volume                |
+| BP_PCGBiomeTexture  | BiomeTextureVolume    |
+| Native PCGVolume    | BrushComponent0       |
 
 COMMON MISTAKES:
-- Using native PCGVolume (BrushComponent) instead of BP_PCGBiomeVolume (BoxComponent)
-- Using "BoxComponent" (class) instead of "BiomeVolume" or "Volume" (instance name)
-- Forgetting BoxExtent is HALF-SIZE, not full size
-- Not resetting RelativeScale3D when setting BoxExtent
-- Forgetting Z margin causes all spawns at exact terrain height
+- Using set_property on BoxExtent (stores value but no visual update)
+- Using native PCGVolume (BrushComponent) instead of BP_PCGBiomeTexture
+- Confusing component names between BP types (Volume vs BiomeTextureVolume)
+- Forgetting to include Z headroom for PCG spawn variation
 """,
         "volume_sizing": """
 SIZING BOXCOMPONENT VOLUMES:
 
-BoxComponent volumes (PCGVolume, TriggerVolume, BlockingVolume, etc.)
-use BoxExtent for their size. Here's how to set them correctly:
+PREFERRED: Use set_transform for scale-based sizing.
+set_property on BoxExtent stores the value but doesn't trigger visual updates
+(no UpdateBounds() / MarkRenderStateDirty() call). Use set_transform instead.
+
+USING set_transform (RECOMMENDED):
+The default BoxExtent is typically [100, 100, 100]. Scale = desired_half_extent / 100.
+
+1. For landscape-covering volumes, use biome_volume_scale:
+   bounds = get_landscape_bounds()
+   scale = bounds["biome_volume_scale"]  # Pre-computed with Z headroom
+   set_transform(target="MyActor->Volume", scale=scale, world_space=true)
+
+2. For custom sizes:
+   # Want a 2000x2000x1000 volume (half-extents: 1000x1000x500)
+   set_transform(target="MyActor->Volume", scale=[10, 10, 5], world_space=true)
+
+USING set_property (NOT recommended - visual won't update):
+If you must use set_property, the wireframe won't update in editor but the
+bounds ARE stored correctly. Values take effect on next level load or PIE.
 
 KEY PROPERTIES ON BOXCOMPONENT:
-- BoxExtent (FVector): HALF-SIZE in each axis
-- RelativeScale3D (FVector): Scale multiplier (set to 1,1,1 when using BoxExtent)
+- BoxExtent (FVector): HALF-SIZE in each axis (default: 100,100,100)
+- RelativeScale3D (FVector): Scale multiplier
 - RelativeLocation (FVector): Offset from actor root
 
-SIZING STEPS:
+RELATIONSHIP: BoxExtent x Scale = Actual half-size
+- BoxExtent=[100,100,100] and Scale=[10,10,5] -> actual half-size = 1000x1000x500
 
-1. Find the component instance name:
-   get_actor(actor_id="MyVolume", include_components=True)
-   # Common names: "Volume", "BoxComponent0", "CollisionComponent"
-   # WARNING: BP classes may use custom names! E.g., BP_PCGBiomeVolume uses "BiomeVolume"
-   # ALWAYS verify component names first!
-
-2. Set BoxExtent (HALF-SIZE):
-   set_property(actor_id="MyVolume", path="Volume.BoxExtent",
-       value="(X=1000,Y=1000,Z=500)")
-   # Creates a 2000x2000x1000 unit volume (double the extent!)
-
-3. Reset scale:
-   set_property(actor_id="MyVolume", path="Volume.RelativeScale3D",
-       value="(X=1,Y=1,Z=1)")
-
-FOR LANDSCAPE COVERAGE:
-   bounds = get_landscape_bounds()
-   set_property(actor_id="MyVolume", path="Volume.BoxExtent",
-       value=f"(X={bounds['half_extents'][0]},Y={bounds['half_extents'][1]},Z={bounds['half_extents'][2]})")
-
-RELATIONSHIP: BoxExtent × Scale = Actual half-size
-- If BoxExtent=[100,100,100] and Scale=[2,2,2], volume is 400x400x400
-- To avoid confusion, set Scale to 1,1,1 and use BoxExtent directly
+COMPONENT INSTANCE NAMES (always verify with get_actor):
+| Blueprint           | Component Name        |
+| BP_PCGBiomeCore     | Volume                |
+| BP_PCGBiomeTexture  | BiomeTextureVolume    |
+| TriggerBox          | CollisionComp         |
+| Native volumes      | BoxComponent0         |
 
 UNITS: All values in Unreal units (centimeters)
 - 100 units = 1 meter
 - Typical game level: 10000-50000 units per axis
-- BoxExtent of [25000, 25000, 5000] covers a 500m × 500m × 100m volume
 """
     }
 
